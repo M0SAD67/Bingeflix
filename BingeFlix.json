@@ -1,0 +1,19 @@
+{
+    "sourceName": "Bingeflix",
+    "iconUrl": "https://raw.githubusercontent.com/xibrox/sora-movie-module/refs/heads/main/bingeflex/icon.png",
+    "author": {
+        "name": "M O S A",
+        "icon":"https://raw.githubusercontent.com/M0SAD67/Module/refs/heads/main/profile.jpg",
+        "url": "https://github.com/M0SAD67"
+    },
+    "version": "2.1.0",
+    "language": "Arabic",
+    "streamType": "HLS",
+    "quality": "1080p",
+    "baseUrl": "https://vidsrc.vip/",
+    "searchBaseUrl": "https://api.themoviedb.org/3/search/multi?api_key=68e094699525b18a70bab2f86b1fa706&query=%s",
+    "scriptUrl": "https://raw.githubusercontent.com/M0SAD67/Module/refs/heads/main/BingeFlix.js",
+    "type": "shows/movies",
+    "asyncJS": true,
+    "softsub": true
+}
