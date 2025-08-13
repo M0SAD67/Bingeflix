@@ -1,606 +1,219 @@
-!function() {
-    "use strict";
-    function t() {
-        return "cf-marker-" + Math.random().toString().slice(2)
-    }
-    function e() {
-        for (var t = [], e = 0; e < arguments.length; e++)
-            t[e] = arguments[e];
-        (n = console.warn || console.log).call.apply(n, [console, "[ROCKET LOADER] "].concat(t));
-        var n
-    }
-    function n(t, e) {
-        var n = e.parentNode;
-        n && h(t, n, e)
-    }
-    function r(t, e) {
-        h(t, e, e.childNodes[0])
-    }
-    function o(t) {
-        var e = t.parentNode;
-        e && e.removeChild(t)
-    }
-    function i(t) {
-        var e = t.namespaceURI === A ? "xlink:href" : "src";
-        return t.getAttribute(e)
-    }
-    function a(t, e) {
-        var n = t.type.substr(e.length);
-        return !(n && !E[n.trim()]) && ((!k || !t.hasAttribute("nomodule")) && !(!k && "module" === n))
-    }
-    function c(t) {
-        return a(t, "")
-    }
-    function s(t, e) {
-        return function(n) {
-            if (e(),
-            t)
-                return t.call(this, n)
-        }
-    }
-    function u(t, e) {
-        t.onload = s(t.onload, e),
-        t.onerror = s(t.onerror, e)
-    }
-    function p(t) {
-        var e = document.createElementNS(t.namespaceURI, "script");
-        e.async = t.hasAttribute("async"),
-        e.textContent = t.textContent;
-        for (var n = 0; n < t.attributes.length; n++) {
-            var r = t.attributes[n];
-            try {
-                r.namespaceURI ? e.setAttributeNS(r.namespaceURI, r.name, r.value) : e.setAttribute(r.name, r.value)
-            } catch (o) {}
-        }
-        return e
-    }
-    function l(t, e) {
-        var n = new I(e);
-        t.dispatchEvent(n)
-    }
-    function d(e) {
-        var n = e.namespaceURI === A
-          , r = t();
-        e.setAttribute(r, "");
-        var i = n ? "<svg>" + e.outerHTML + "</svg>" : e.outerHTML;
-        L.call(document, i);
-        var a = document.querySelector("[" + r + "]");
-        if (a) {
-            a.removeAttribute(r);
-            var c = n && a.parentNode;
-            c && o(c)
-        }
-        return a
-    }
-    function f(t) {
-        if (t && "handleEvent"in t) {
-            var e = t.handleEvent;
-            return "function" == typeof e ? e.bind(t) : e
-        }
-        return t
-    }
-    function h(t, e, n) {
-        var r = n ? function(t) {
-            return e.insertBefore(t, n)
-        }
-        : function(t) {
-            return e.appendChild(t)
-        }
-        ;
-        Array.prototype.slice.call(t).forEach(r)
-    }
-    function v() {
-        return /chrome/i.test(navigator.userAgent) && /google/i.test(navigator.vendor)
-    }
-    function y(t, e) {
-        function n() {
-            this.constructor = t
-        }
-        H(t, e),
-        t.prototype = null === e ? Object.create(e) : (n.prototype = e.prototype,
-        new n)
-    }
-    function m(t) {
-        return t instanceof Window ? ["load"] : t instanceof Document ? ["DOMContentLoaded", "readystatechange"] : []
-    }
-    function b(t) {
-        var e = t.getAttribute(R);
-        if (!e)
-            return null;
-        var n = e.split(T);
-        return {
-            nonce: n[0],
-            handlerPrefixLength: +n[1],
-            bailout: !t.hasAttribute("defer")
-        }
-    }
-    function g(t) {
-        var e = B + t.nonce;
-        Array.prototype.forEach.call(document.querySelectorAll("[" + e + "]"), function(n) {
-            n.removeAttribute(e),
-            Array.prototype.forEach.call(n.attributes, function(e) {
-                /^on/.test(e.name) && "function" != typeof n[e.name] && n.setAttribute(e.name, e.value.substring(t.handlerPrefixLength))
-            })
-        })
-    }
-    function S() {
-        var t = window;
-        "undefined" != typeof Promise && (t.__cfQR = {
-            done: new Promise(function(t) {
-                return U = t
-            }
-            )
-        })
-    }
-    function w(t) {
-        var e = new N(t)
-          , n = new C(e);
-        e.harvestScriptsInDocument(),
-        new W(e,{
-            nonce: t,
-            blocking: !0,
-            docWriteSimulator: n,
-            callback: function() {}
-        }).run()
-    }
-    function x(t) {
-        var e = new N(t)
-          , n = new C(e);
-        e.harvestScriptsInDocument();
-        var r = new W(e,{
-            nonce: t,
-            blocking: !1,
-            docWriteSimulator: n,
-            callback: function() {
-                window.__cfRLUnblockHandlers = !0,
-                r.removePreloadHints(),
-                P(t)
-            }
+// دالة للبحث عن الأفلام أو البرامج بناءً على الكلمة الرئيسية
+async function searchResults(keyword) {
+    try {
+        const encodedKeyword = encodeURIComponent(keyword);
+        const response = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=68e094699525b18a70bab2f86b1fa706&query=${encodedKeyword}`);
+        const data = await response.json();
+
+        const results = data.results.map(result => {
+            let title = result.title || result.name || result.original_title || result.original_name || "Untitled";
+            let image = result.poster_path ? `https://image.tmdb.org/t/p/w500${result.poster_path}` : "";
+            let href = result.media_type === "movie" ? `https://bingeflix.tv/movie/${result.id}` : `https://bingeflix.tv/tv/${result.id}`;
+            
+            return { title, image, href };
         });
-        r.insertPreloadHints(),
-        M.runOnLoad(function() {
-            r.run()
-        })
+
+        return JSON.stringify(results);
+    } catch (error) {
+        console.error('Error fetching search results:', error);
+        return JSON.stringify([{ title: 'Error', image: '', href: '' }]);
     }
-    function P(t) {
-        var e = new O(t);
-        M.simulateStateBeforeDeferScriptsActivation(),
-        e.harvestDeferScriptsInDocument(),
-        new W(e,{
-            nonce: t,
-            blocking: !1,
-            callback: function() {
-                M.simulateStateAfterDeferScriptsActivation(),
-                U && U()
-            }
-        }).run()
+}
+
+// دالة لاستخراج تفاصيل الفيلم أو المسلسل
+async function extractDetails(url) {
+    try {
+        let mediaType = url.includes('/movie/') ? 'movie' : 'tv';
+        const id = url.split('/').pop();
+
+        let apiUrl = mediaType === 'movie' 
+            ? `https://api.themoviedb.org/3/movie/${id}?api_key=ad301b7cc82ffe19273e55e4d4206885`
+            : `https://api.themoviedb.org/3/tv/${id}?api_key=ad301b7cc82ffe19273e55e4d4206885`;
+
+        const response = await fetch(apiUrl);
+        const data = await response.json();
+
+        return JSON.stringify([{
+            description: data.overview || 'No description available',
+            aliases: `Duration: ${data.runtime || 'Unknown'} minutes`,
+            airdate: `Released: ${data.release_date || 'Unknown'}`
+        }]);
+    } catch (error) {
+        console.error('Error fetching details:', error);
+        return JSON.stringify([{ description: 'Error loading description', aliases: 'Duration: Unknown', airdate: 'Aired/Released: Unknown' }]);
     }
-    var A = "http://www.w3.org/2000/svg"
-      , E = {
-        "application/ecmascript": !0,
-        "application/javascript": !0,
-        "application/x-ecmascript": !0,
-        "application/x-javascript": !0,
-        "text/ecmascript": !0,
-        "text/javascript": !0,
-        "text/javascript1.0": !0,
-        "text/javascript1.1": !0,
-        "text/javascript1.2": !0,
-        "text/javascript1.3": !0,
-        "text/javascript1.4": !0,
-        "text/javascript1.5": !0,
-        "text/jscript": !0,
-        "text/livescript": !0,
-        "text/x-ecmascript": !0,
-        "text/x-javascript": !0,
-        module: !0
+}
+
+// دالة لاستخراج قائمة الحلقات (للمسلسلات)
+async function extractEpisodes(url) {
+    try {
+        let mediaType = url.includes('/movie/') ? 'movie' : 'tv';
+        const id = url.split('/').pop();
+        
+        if (mediaType === 'movie') {
+            return JSON.stringify([{ href: `https://bingeflix.tv/movie/${id}`, number: 1, title: "Full Movie" }]);
+        }
+
+        let apiUrl = `https://api.themoviedb.org/3/tv/${id}?api_key=ad301b7cc82ffe19273e55e4d4206885`;
+        const response = await fetch(apiUrl);
+        const showData = await response.json();
+
+        let allEpisodes = [];
+        for (const season of showData.seasons) {
+            if (season.season_number > 0) {
+                const seasonResponse = await fetch(`https://api.themoviedb.org/3/tv/${id}/season/${season.season_number}?api_key=ad301b7cc82ffe19273e55e4d4206885`);
+                const seasonData = await seasonResponse.json();
+                const episodes = seasonData.episodes.map(episode => ({
+                    href: `https://bingeflix.tv/tv/${id}?season=${season.season_number}&episode=${episode.episode_number}`,
+                    number: episode.episode_number,
+                    title: episode.name || "Untitled"
+                }));
+                allEpisodes = allEpisodes.concat(episodes);
+            }
+        }
+
+        return JSON.stringify(allEpisodes);
+    } catch (error) {
+        console.error('Error fetching episodes:', error);
+        return JSON.stringify([]);
     }
-      , k = void 0 !== document.createElement("script").noModule
-      , I = function() {
-        var t = window;
-        return t.__rocketLoaderEventCtor || Object.defineProperty(t, "__rocketLoaderEventCtor", {
-            value: Event
-        }),
-        t.__rocketLoaderEventCtor
-    }()
-      , L = document.write
-      , _ = document.writeln
-      , H = Object.setPrototypeOf || {
-        __proto__: []
-    }instanceof Array && function(t, e) {
-        t.__proto__ = e
+}
+
+// دالة لاستخراج رابط البث
+async function extractStreamUrl(url) {
+    try {
+        let mediaType = url.includes('/movie/') ? 'movie' : 'tv';
+        const id = url.split('/').pop();
+
+        if (mediaType === 'movie') {
+            const embedUrl = `https://vidsrc.su/embed/movie/${id}`;
+            const data1 = await fetch(embedUrl).then(res => res.text());
+
+            const urlRegex = /url:\s*(['"])(.*?)\1/gm;
+            const streams = Array.from(data1.matchAll(urlRegex), m => m[2].trim()).filter(Boolean);
+
+            return JSON.stringify({ streams });
+        } else {
+            const [showId, seasonNumber, episodeNumber] = url.match(/tv\/([^\/]+)\/season\/([^\/]+)\/episode\/([^\/]+)/).slice(1);
+            const embedUrl = `https://vidsrc.su/embed/tv/${showId}/${seasonNumber}/${episodeNumber}`;
+            const data1 = await fetch(embedUrl).then(res => res.text());
+
+            const urlRegex = /url:\s*(['"])(.*?)\1/gm;
+            const streams = Array.from(data1.matchAll(urlRegex), m => m[2].trim()).filter(Boolean);
+
+            return JSON.stringify({ streams });
+        }
+    } catch (error) {
+        console.error('Error fetching stream URL:', error);
+        return JSON.stringify({ streams: [] });
     }
-    || function(t, e) {
-        for (var n in e)
-            e.hasOwnProperty(n) && (t[n] = e[n])
+}
+// دالة لتحميل الترجمة (في حال كانت متاحة)
+async function extractSubtitles(movieId) {
+    try {
+        // الحصول على روابط الترجمة باستخدام واجهة API
+        const subtitleTrackResponse = await fetch(`https://sub.wyzie.ru/search?id=${movieId}`);
+        const subtitleTrackData = await subtitleTrackResponse.json();
+
+        let subtitleTrack = subtitleTrackData.find(track =>
+            track.display.includes('Arabic') && (track.encoding === 'ASCII' || track.encoding === 'UTF-8')
+        );
+
+        if (!subtitleTrack) {
+            subtitleTrack = subtitleTrackData.find(track => track.display.includes('Arabic') && (track.encoding === 'CP1252'));
+        }
+
+        if (!subtitleTrack) {
+            subtitleTrack = subtitleTrackData.find(track => track.display.includes('Arabic') && (track.encoding === 'CP1250'));
+        }
+
+        if (!subtitleTrack) {
+            subtitleTrack = subtitleTrackData.find(track => track.display.includes('Arabic') && (track.encoding === 'CP850'));
+        }
+
+        return subtitleTrack ? subtitleTrack.url : '';  // إرجاع رابط الترجمة إذا كان متاحًا
+    } catch (err) {
+        console.error('Error fetching subtitles:', err);
+        return '';  // إذا فشل، إرجاع قيمة فارغة
     }
-      , D = function() {
-        function t(t) {
-            this.nonce = t,
-            this.items = []
-        }
-        return Object.defineProperty(t.prototype, "hasItems", {
-            get: function() {
-                return this.items.length > 0
-            },
-            enumerable: !0,
-            configurable: !0
-        }),
-        t.prototype.pop = function() {
-            return this.items.pop()
-        }
-        ,
-        t.prototype.forEach = function(t) {
-            this.items.forEach(function(e) {
-                var n = e.script;
-                return t(n)
-            })
-        }
-        ,
-        t.prototype.harvestScripts = function(t, e) {
-            var n = this
-              , r = e.filter
-              , o = e.mutate;
-            Array.prototype.slice.call(t.querySelectorAll("script")).filter(r).reverse().forEach(function(t) {
-                o(t),
-                n.pushScriptOnStack(t)
-            })
-        }
-        ,
-        t.prototype.pushScriptOnStack = function(t) {
-            var e = t.parentNode
-              , n = this.createPlaceholder(t)
-              , r = !!i(t);
-            e.replaceChild(n, t),
-            this.items.push({
-                script: t,
-                placeholder: n,
-                external: r,
-                async: r && t.hasAttribute("async"),
-                executable: c(t)
-            })
-        }
-        ,
-        t.prototype.hasNonce = function(t) {
-            return 0 === (t.getAttribute("type") || "").indexOf(this.nonce)
-        }
-        ,
-        t.prototype.removeNonce = function(t) {
-            t.type = t.type.substr(this.nonce.length)
-        }
-        ,
-        t.prototype.makeNonExecutable = function(t) {
-            t.type = this.nonce + t.type
-        }
-        ,
-        t.prototype.isPendingDeferScript = function(t) {
-            return t.hasAttribute("defer") || t.type === this.nonce + "module" && !t.hasAttribute("async")
-        }
-        ,
-        t
-    }()
-      , N = function(t) {
-        function e() {
-            return null !== t && t.apply(this, arguments) || this
-        }
-        return y(e, t),
-        e.prototype.harvestScriptsInDocument = function() {
-            var t = this;
-            this.harvestScripts(document, {
-                filter: function(e) {
-                    return t.hasNonce(e)
-                },
-                mutate: function(e) {
-                    t.isPendingDeferScript(e) || t.removeNonce(e)
-                }
-            })
-        }
-        ,
-        e.prototype.harvestScriptsAfterDocWrite = function(t) {
-            var e = this;
-            this.harvestScripts(t, {
-                filter: c,
-                mutate: function(t) {
-                    e.isPendingDeferScript(t) && e.makeNonExecutable(t)
-                }
-            })
-        }
-        ,
-        e.prototype.createPlaceholder = function(t) {
-            return document.createComment(t.outerHTML)
-        }
-        ,
-        e
-    }(D)
-      , O = function(t) {
-        function e() {
-            return null !== t && t.apply(this, arguments) || this
-        }
-        return y(e, t),
-        e.prototype.harvestDeferScriptsInDocument = function() {
-            var t = this;
-            this.harvestScripts(document, {
-                filter: function(e) {
-                    return t.hasNonce(e) && t.isPendingDeferScript(e)
-                },
-                mutate: function(e) {
-                    return t.removeNonce(e)
-                }
-            })
-        }
-        ,
-        e.prototype.createPlaceholder = function(t) {
-            var e = p(t);
-            return this.makeNonExecutable(e),
-            e
-        }
-        ,
-        e
-    }(D)
-      , C = function() {
-        function t(t) {
-            this.scriptStack = t
-        }
-        return t.prototype.enable = function(t) {
-            var e = this;
-            this.insertionPointMarker = t,
-            this.buffer = "",
-            document.write = function() {
-                for (var t = [], n = 0; n < arguments.length; n++)
-                    t[n] = arguments[n];
-                return e.write(t, !1)
-            }
-            ,
-            document.writeln = function() {
-                for (var t = [], n = 0; n < arguments.length; n++)
-                    t[n] = arguments[n];
-                return e.write(t, !0)
-            }
-        }
-        ,
-        t.prototype.flushWrittenContentAndDisable = function() {
-            document.write = L,
-            document.writeln = _,
-            this.buffer.length && (document.contains(this.insertionPointMarker) ? this.insertionPointMarker.parentNode === document.head ? this.insertContentInHead() : this.insertContentInBody() : e("Insertion point marker for document.write was detached from document:", "Markup will not be inserted"))
-        }
-        ,
-        t.prototype.insertContentInHead = function() {
-            var t = new DOMParser
-              , e = "<!DOCTYPE html><head>" + this.buffer + "</head>"
-              , o = t.parseFromString(e, "text/html");
-            if (this.scriptStack.harvestScriptsAfterDocWrite(o),
-            n(o.head.childNodes, this.insertionPointMarker),
-            o.body.childNodes.length) {
-                for (var i = Array.prototype.slice.call(o.body.childNodes), a = this.insertionPointMarker.nextSibling; a; )
-                    i.push(a),
-                    a = a.nextSibling;
-                document.body || L.call(document, "<body>"),
-                r(i, document.body)
-            }
-        }
-        ,
-        t.prototype.insertContentInBody = function() {
-            var t = this.insertionPointMarker.parentElement
-              , e = document.createElement(t.tagName);
-            e.innerHTML = this.buffer,
-            this.scriptStack.harvestScriptsAfterDocWrite(e),
-            n(e.childNodes, this.insertionPointMarker)
-        }
-        ,
-        t.prototype.write = function(t, e) {
-            var n = document.currentScript;
-            n && i(n) && n.hasAttribute("async") ? (r = e ? _ : L).call.apply(r, [document].concat(t)) : this.buffer += t.map(String).join(e ? "\n" : "");
-            var r
-        }
-        ,
-        t
-    }()
-      , j = function() {
-        function t() {
-            var t = this;
-            this.simulatedReadyState = "loading",
-            this.bypassEventsInProxies = !1,
-            this.nativeWindowAddEventListener = window.addEventListener;
-            try {
-                Object.defineProperty(document, "readyState", {
-                    get: function() {
-                        return t.simulatedReadyState
-                    }
-                })
-            } catch (e) {}
-            this.setupEventListenerProxy(),
-            this.updateInlineHandlers()
-        }
-        return t.prototype.runOnLoad = function(t) {
-            var e = this;
-            this.nativeWindowAddEventListener.call(window, "load", function(n) {
-                if (!e.bypassEventsInProxies)
-                    return t(n)
-            })
-        }
-        ,
-        t.prototype.updateInlineHandlers = function() {
-            this.proxyInlineHandler(document, "onreadystatechange"),
-            this.proxyInlineHandler(window, "onload"),
-            document.body && this.proxyInlineHandler(document.body, "onload")
-        }
-        ,
-        t.prototype.simulateStateBeforeDeferScriptsActivation = function() {
-            this.bypassEventsInProxies = !0,
-            this.simulatedReadyState = "interactive",
-            l(document, "readystatechange"),
-            this.bypassEventsInProxies = !1
-        }
-        ,
-        t.prototype.simulateStateAfterDeferScriptsActivation = function() {
-            var t = this;
-            this.bypassEventsInProxies = !0,
-            l(document, "DOMContentLoaded"),
-            this.simulatedReadyState = "complete",
-            l(document, "readystatechange"),
-            l(window, "load"),
-            this.bypassEventsInProxies = !1,
-            window.setTimeout(function() {
-                return t.bypassEventsInProxies = !0
-            }, 0)
-        }
-        ,
-        t.prototype.setupEventListenerProxy = function() {
-            var t = this;
-            ("undefined" != typeof EventTarget ? [EventTarget.prototype] : [Node.prototype, Window.prototype]).forEach(function(e) {
-                return t.patchEventTargetMethods(e)
-            })
-        }
-        ,
-        t.prototype.patchEventTargetMethods = function(t) {
-            var e = this
-              , n = t.addEventListener
-              , r = t.removeEventListener;
-            t.addEventListener = function(t, r) {
-                for (var o = [], i = 2; i < arguments.length; i++)
-                    o[i - 2] = arguments[i];
-                var a = m(this)
-                  , c = r && r.__rocketLoaderProxiedHandler;
-                if (!c) {
-                    var s = f(r);
-                    "function" == typeof s ? (c = function(n) {
-                        if (e.bypassEventsInProxies || a.indexOf(t) < 0)
-                            return s.call(this, n)
-                    }
-                    ,
-                    Object.defineProperty(r, "__rocketLoaderProxiedHandler", {
-                        value: c
-                    })) : c = r
-                }
-                n.call.apply(n, [this, t, c].concat(o))
-            }
-            ,
-            t.removeEventListener = function(t, e) {
-                for (var n = [], o = 2; o < arguments.length; o++)
-                    n[o - 2] = arguments[o];
-                var i = e && e.__rocketLoaderProxiedHandler || e;
-                r.call.apply(r, [this, t, i].concat(n))
-            }
-        }
-        ,
-        t.prototype.proxyInlineHandler = function(t, e) {
-            try {
-                var n = t[e];
-                if (n && !n.__rocketLoaderInlineHandlerProxy) {
-                    var r = this;
-                    t[e] = function(t) {
-                        if (r.bypassEventsInProxies)
-                            return n.call(this, t)
-                    }
-                    ,
-                    Object.defineProperty(t[e], "__rocketLoaderInlineHandlerProxy", {
-                        value: !0
-                    })
-                }
-            } catch (o) {
-                return void console.warn("encountered an error when accessing " + e + " handler:", o.message)
-            }
-        }
-        ,
-        t
-    }()
-      , M = function() {
-        var t = window;
-        return t.__rocketLoaderLoadProgressSimulator || Object.defineProperty(t, "__rocketLoaderLoadProgressSimulator", {
-            value: new j
-        }),
-        t.__rocketLoaderLoadProgressSimulator
-    }()
-      , W = function() {
-        function t(t, e) {
-            this.scriptStack = t,
-            this.settings = e,
-            this.preloadHints = []
-        }
-        return t.prototype.insertPreloadHints = function() {
-            var t = this;
-            this.scriptStack.forEach(function(e) {
-                if (a(e, t.settings.nonce)) {
-                    var n = i(e)
-                      , r = v() && e.hasAttribute("integrity");
-                    if (n && !r) {
-                        var o = document.createElement("link");
-                        o.setAttribute("rel", "preload"),
-                        o.setAttribute("as", "script"),
-                        o.setAttribute("href", n),
-                        e.crossOrigin && o.setAttribute("crossorigin", e.crossOrigin),
-                        document.head.appendChild(o),
-                        t.preloadHints.push(o)
-                    }
-                }
-            })
-        }
-        ,
-        t.prototype.removePreloadHints = function() {
-            this.preloadHints.forEach(function(t) {
-                return o(t)
-            })
-        }
-        ,
-        t.prototype.run = function() {
-            for (var t = this, e = this; this.scriptStack.hasItems; ) {
-                var n = function() {
-                    var n = e.settings.docWriteSimulator
-                      , r = e.scriptStack.pop();
-                    n && !r.async && n.enable(r.placeholder);
-                    var o = e.activateScript(r);
-                    return o ? r.external && r.executable && !r.async ? (u(o, function() {
-                        t.finalizeActivation(r),
-                        t.run()
-                    }),
-                    {
-                        value: void 0
-                    }) : void e.finalizeActivation(r) : (n && n.flushWrittenContentAndDisable(),
-                    "continue")
-                }();
-                if ("object" == typeof n)
-                    return n.value
-            }
-            this.scriptStack.hasItems || this.settings.callback()
-        }
-        ,
-        t.prototype.finalizeActivation = function(t) {
-            this.settings.docWriteSimulator && !t.async && this.settings.docWriteSimulator.flushWrittenContentAndDisable(),
-            M.updateInlineHandlers(),
-            o(t.placeholder)
-        }
-        ,
-        t.prototype.activateScript = function(t) {
-            var n = t.script
-              , r = t.placeholder
-              , o = t.external
-              , i = t.async
-              , a = r.parentNode;
-            if (!document.contains(r))
-                return e("Placeholder for script \n" + n.outerHTML + "\n was detached from document.", "Script will not be executed."),
-                null;
-            var c = this.settings.blocking && o && !i ? d(n) : p(n);
-            return c ? (a.insertBefore(c, r),
-            c) : (e("Failed to create activatable copy of script \n" + n.outerHTML + "\n", "Script will not be executed."),
-            null)
-        }
-        ,
-        t
-    }()
-      , R = "data-cf-settings"
-      , T = "|"
-      , B = "data-cf-modified-"
-      , U = void 0;
-    !function() {
-        var t = document.currentScript;
-        if (t) {
-            var n = b(t);
-            n ? (o(t),
-            g(n),
-            M.updateInlineHandlers(),
-            n.bailout ? w(n.nonce) : (S(),
-            x(n.nonce))) : e("Activator script doesn't have settings. No scripts will be executed.")
-        } else
-            e("Can't obtain activator script. No scripts will be executed.")
-    }()
-}();
+}
+
+// دالة لتحميل روابط البث للمحتوى (فيلم أو مسلسل)
+async function extractStreamLinks(movieId, isMovie = true) {
+    try {
+        let streams = [];
+
+        const embedUrl = isMovie ? `https://vidsrc.su/embed/movie/${movieId}` : `https://vidsrc.su/embed/tv/${movieId}`;
+        const data1 = await fetch(embedUrl).then(res => res.text());
+
+        const urlRegex = /url:\s*(['"])(.*?)\1/gm;
+        const streams2 = Array.from(data1.matchAll(urlRegex), m => m[2].trim()).filter(Boolean);
+
+        streams = [...streams, ...streams2];
+
+        return streams;  // إرجاع روابط البث المتاحة
+    } catch (err) {
+        console.error('Error fetching stream links:', err);
+        return [];  // إرجاع مصفوفة فارغة إذا حدث خطأ
+    }
+}
+
+// دالة لتحويل البيانات إلى Base64
+function encodeToBase64(str) {
+    try {
+        return btoa(str);  // استخدام دالة البايتو
+    } catch (err) {
+        console.error('Error encoding to Base64:', err);
+        return '';
+    }
+}
+
+// دالة لفك ترميز الرابط إلى شكل أكثر قابلية للاستخدام
+function decodeFromBase64(encodedStr) {
+    try {
+        return atob(encodedStr);  // فك الترميز باستخدام atob
+    } catch (err) {
+        console.error('Error decoding from Base64:', err);
+        return '';
+    }
+}
+
+// دالة لعرض روابط البث والترجمة بشكل منسق
+async function displayStreamData(url) {
+    try {
+        const movieId = url.split('/').pop();  // استخراج ID من الرابط
+        const streams = await extractStreamLinks(movieId, url.includes('/movie/'));
+        const subtitleUrl = await extractSubtitles(movieId);
+
+        return JSON.stringify({
+            streams,
+            subtitles: subtitleUrl
+        });
+    } catch (err) {
+        console.error('Error displaying stream data:', err);
+        return JSON.stringify({
+            streams: [],
+            subtitles: ''
+        });
+    }
+}
+
+// استخدام كل هذه الدوال
+async function main() {
+    const searchTerm = "Batman";  // يمكنك تغيير الكلمة المفتاحية كما تشاء
+    const searchResultsData = await searchResults(searchTerm);
+    console.log('Search Results:', searchResultsData);
+
+    const movieUrl = 'https://bingeflix.tv/movie/12345';  // استبدل بـ URL حقيقي
+    const movieDetails = await extractDetails(movieUrl);
+    console.log('Movie Details:', movieDetails);
+
+    const episodes = await extractEpisodes(movieUrl);
+    console.log('Episodes:', episodes);
+
+    const streamData = await displayStreamData(movieUrl);
+    console.log('Stream Data:', streamData);
+}
+
+// بدء التطبيق
+main();
