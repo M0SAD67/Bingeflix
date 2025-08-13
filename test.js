@@ -1,21 +1,35 @@
-// دالة للبحث عن الأفلام أو البرامج بناءً على الكلمة الرئيسية
+// دالة للبحث عن الأفلام والمسلسلات بناءً على الكلمة المفتاحية
 async function searchResults(keyword) {
     try {
         const encodedKeyword = encodeURIComponent(keyword);
-        const response = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=68e094699525b18a70bab2f86b1fa706&query=${encodedKeyword}`);
-        const data = await response.json();
+        const responseText = await soraFetch(`https://api.themoviedb.org/3/search/multi?api_key=68e094699525b18a70bab2f86b1fa706&query=${encodedKeyword}`);
+        const data = await responseText.json();
 
-        const results = data.results.map(result => {
-            let title = result.title || result.name || result.original_title || result.original_name || "Untitled";
-            let image = result.poster_path ? `https://image.tmdb.org/t/p/w500${result.poster_path}` : "";
-            let href = result.media_type === "movie" ? `https://bingeflix.tv/movie/${result.id}` : `https://bingeflix.tv/tv/${result.id}`;
-            
-            return { title, image, href };
+        const transformedResults = data.results.map(result => {
+            if(result.media_type === "movie" || result.title) {
+                return {
+                    title: result.title || result.name || result.original_title || result.original_name,
+                    image: `https://image.tmdb.org/t/p/w500${result.poster_path}`,
+                    href: `https://bingeflix.tv/movie/${result.id}`
+                };
+            } else if(result.media_type === "tv" || result.name) {
+                return {
+                    title: result.name || result.title || result.original_name || result.original_title,
+                    image: `https://image.tmdb.org/t/p/w500${result.poster_path}`,
+                    href: `https://bingeflix.tv/tv/${result.id}`
+                };
+            } else {
+                return {
+                    title: result.title || result.name || result.original_name || result.original_title || "Untitled",
+                    image: `https://image.tmdb.org/t/p/w500${result.poster_path}`,
+                    href: `https://bingeflix.tv/tv/${result.id}`
+                };
+            }
         });
 
-        return JSON.stringify(results);
+        return JSON.stringify(transformedResults);
     } catch (error) {
-        console.error('Error fetching search results:', error);
+        console.log('Fetch error in searchResults:', error);
         return JSON.stringify([{ title: 'Error', image: '', href: '' }]);
     }
 }
@@ -23,197 +37,173 @@ async function searchResults(keyword) {
 // دالة لاستخراج تفاصيل الفيلم أو المسلسل
 async function extractDetails(url) {
     try {
-        let mediaType = url.includes('/movie/') ? 'movie' : 'tv';
-        const id = url.split('/').pop();
+        if(url.includes('/movie/')) {
+            const match = url.match(/https:\/\/bingeflix\.tv\/movie\/([^\/]+)/);
+            if (!match) throw new Error("Invalid URL format");
 
-        let apiUrl = mediaType === 'movie' 
-            ? `https://api.themoviedb.org/3/movie/${id}?api_key=ad301b7cc82ffe19273e55e4d4206885`
-            : `https://api.themoviedb.org/3/tv/${id}?api_key=ad301b7cc82ffe19273e55e4d4206885`;
+            const movieId = match[1];
+            const responseText = await soraFetch(`https://api.themoviedb.org/3/movie/${movieId}?api_key=ad301b7cc82ffe19273e55e4d4206885`);
+            const data = await responseText.json();
 
-        const response = await fetch(apiUrl);
-        const data = await response.json();
+            const transformedResults = [{
+                description: data.overview || 'No description available',
+                aliases: `Duration: ${data.runtime ? data.runtime + " minutes" : 'Unknown'}`,
+                airdate: `Released: ${data.release_date ? data.release_date : 'Unknown'}`
+            }];
 
-        return JSON.stringify([{
-            description: data.overview || 'No description available',
-            aliases: `Duration: ${data.runtime || 'Unknown'} minutes`,
-            airdate: `Released: ${data.release_date || 'Unknown'}`
-        }]);
+            return JSON.stringify(transformedResults);
+        } else if(url.includes('/tv/')) {
+            const match = url.match(/https:\/\/bingeflix\.tv\/tv\/([^\/]+)/);
+            if (!match) throw new Error("Invalid URL format");
+
+            const showId = match[1];
+            const responseText = await soraFetch(`https://api.themoviedb.org/3/tv/${showId}?api_key=ad301b7cc82ffe19273e55e4d4206885`);
+            const data = await responseText.json();
+
+            const transformedResults = [{
+                description: data.overview || 'No description available',
+                aliases: `Duration: ${data.episode_run_time && data.episode_run_time.length ? data.episode_run_time.join(', ') + " minutes" : 'Unknown'}`,
+                airdate: `Aired: ${data.first_air_date ? data.first_air_date : 'Unknown'}`
+            }];
+
+            return JSON.stringify(transformedResults);
+        } else {
+            throw new Error("Invalid URL format");
+        }
     } catch (error) {
-        console.error('Error fetching details:', error);
-        return JSON.stringify([{ description: 'Error loading description', aliases: 'Duration: Unknown', airdate: 'Aired/Released: Unknown' }]);
+        console.log('Details error:', error);
+        return JSON.stringify([{
+            description: 'Error loading description',
+            aliases: 'Duration: Unknown',
+            airdate: 'Aired/Released: Unknown'
+        }]);
     }
 }
 
-// دالة لاستخراج قائمة الحلقات (للمسلسلات)
+// دالة لاستخراج الحلقات للمسلسل
 async function extractEpisodes(url) {
     try {
-        let mediaType = url.includes('/movie/') ? 'movie' : 'tv';
-        const id = url.split('/').pop();
-        
-        if (mediaType === 'movie') {
-            return JSON.stringify([{ href: `https://bingeflix.tv/movie/${id}`, number: 1, title: "Full Movie" }]);
-        }
+        if(url.includes('/movie/')) {
+            const match = url.match(/https:\/\/bingeflix\.tv\/movie\/([^\/]+)/);
+            if (!match) throw new Error("Invalid URL format");
 
-        let apiUrl = `https://api.themoviedb.org/3/tv/${id}?api_key=ad301b7cc82ffe19273e55e4d4206885`;
-        const response = await fetch(apiUrl);
-        const showData = await response.json();
+            const movieId = match[1];
 
-        let allEpisodes = [];
-        for (const season of showData.seasons) {
-            if (season.season_number > 0) {
-                const seasonResponse = await fetch(`https://api.themoviedb.org/3/tv/${id}/season/${season.season_number}?api_key=ad301b7cc82ffe19273e55e4d4206885`);
-                const seasonData = await seasonResponse.json();
-                const episodes = seasonData.episodes.map(episode => ({
-                    href: `https://bingeflix.tv/tv/${id}?season=${season.season_number}&episode=${episode.episode_number}`,
-                    number: episode.episode_number,
-                    title: episode.name || "Untitled"
-                }));
-                allEpisodes = allEpisodes.concat(episodes);
+            return JSON.stringify([
+                { href: `https://bingeflix.tv/movie/${movieId}`, number: 1, title: "Full Movie" }
+            ]);
+        } else if(url.includes('/tv/')) {
+            const match = url.match(/https:\/\/bingeflix\.tv\/tv\/([^\/]+)/);
+            if (!match) throw new Error("Invalid URL format");
+
+            const showId = match[1];
+
+            const showResponseText = await soraFetch(`https://api.themoviedb.org/3/tv/${showId}?api_key=ad301b7cc82ffe19273e55e4d4206885`);
+            const showData = await showResponseText.json();
+
+            let allEpisodes = [];
+            for (const season of showData.seasons) {
+                const seasonNumber = season.season_number;
+
+                if(seasonNumber === 0) continue;
+
+                const seasonResponseText = await soraFetch(`https://api.themoviedb.org/3/tv/${showId}/season/${seasonNumber}?api_key=ad301b7cc82ffe19273e55e4d4206885`);
+                const seasonData = await seasonResponseText.json();
+
+                if (seasonData.episodes && seasonData.episodes.length) {
+                    const episodes = seasonData.episodes.map(episode => ({
+                        href: `https://bingeflix.tv/tv/${showId}?season=${seasonNumber}&episode=${episode.episode_number}`,
+                        number: episode.episode_number,
+                        title: episode.name || ""
+                    }));
+                    allEpisodes = allEpisodes.concat(episodes);
+                }
             }
-        }
 
-        return JSON.stringify(allEpisodes);
+            return JSON.stringify(allEpisodes);
+        } else {
+            throw new Error("Invalid URL format");
+        }
     } catch (error) {
-        console.error('Error fetching episodes:', error);
+        console.log('Fetch error in extractEpisodes:', error);
         return JSON.stringify([]);
     }
 }
 
-// دالة لاستخراج رابط البث
+// دالة لاستخراج روابط البث للـ Movie أو الـ TV Show
 async function extractStreamUrl(url) {
-    try {
-        let mediaType = url.includes('/movie/') ? 'movie' : 'tv';
-        const id = url.split('/').pop();
+    if (!_0xCheck()) return 'https://files.catbox.moe/avolvc.mp4';
 
-        if (mediaType === 'movie') {
-            const embedUrl = `https://vidsrc.su/embed/movie/${id}`;
-            const data1 = await fetch(embedUrl).then(res => res.text());
+    try {
+        if (url.includes('/movie/')) {
+            const match = url.match(/https:\/\/bingeflix\.tv\/movie\/([^\/]+)/);
+            if (!match) throw new Error("Invalid URL format");
+
+            const movieId = match[1];
+            const embedUrl = `https://vidsrc.su/embed/movie/${movieId}`;
+            const data1 = await soraFetch(embedUrl).then(res => res.text());
+
+            const urlRegex = /url:\s*(['"])(.*?)\1/gm;
+            const streams = Array.from(data1.matchAll(urlRegex), m => m[2].trim()).filter(Boolean);
+
+            return JSON.stringify({ streams });
+        } else if (url.includes('/tv/')) {
+            const match = url.match(/https:\/\/bingeflix\.tv\/tv\/([^\/]+)/);
+            if (!match) throw new Error("Invalid URL format");
+
+            const showId = match[1];
+            const embedUrl = `https://vidsrc.su/embed/tv/${showId}`;
+            const data1 = await soraFetch(embedUrl).then(res => res.text());
 
             const urlRegex = /url:\s*(['"])(.*?)\1/gm;
             const streams = Array.from(data1.matchAll(urlRegex), m => m[2].trim()).filter(Boolean);
 
             return JSON.stringify({ streams });
         } else {
-            const [showId, seasonNumber, episodeNumber] = url.match(/tv\/([^\/]+)\/season\/([^\/]+)\/episode\/([^\/]+)/).slice(1);
-            const embedUrl = `https://vidsrc.su/embed/tv/${showId}/${seasonNumber}/${episodeNumber}`;
-            const data1 = await fetch(embedUrl).then(res => res.text());
-
-            const urlRegex = /url:\s*(['"])(.*?)\1/gm;
-            const streams = Array.from(data1.matchAll(urlRegex), m => m[2].trim()).filter(Boolean);
-
-            return JSON.stringify({ streams });
+            throw new Error("Invalid URL format");
         }
     } catch (error) {
-        console.error('Error fetching stream URL:', error);
-        return JSON.stringify({ streams: [] });
+        console.log('Fetch error in extractStreamUrl:', error);
+        return null;
     }
 }
-// دالة لتحميل الترجمة (في حال كانت متاحة)
-async function extractSubtitles(movieId) {
+
+// دالة للمساعدة في التحقق من بعض الأوامر (أدوات حماية، إلخ)
+function _0xCheck() {
+    var _0x1a = typeof _0xB4F2 === 'function';
+    var _0x2b = typeof _0x7E9A === 'function';
+    return _0x1a && _0x2b ? (function(_0x3c) {
+        return _0x7E9A(_0x3c);
+    })(_0xB4F2()) : !1;
+}
+
+// دالة للاستدعاء الآمن للـ Fetch
+async function soraFetch(url, options = { headers: {}, method: 'GET', body: null }) {
     try {
-        // الحصول على روابط الترجمة باستخدام واجهة API
-        const subtitleTrackResponse = await fetch(`https://sub.wyzie.ru/search?id=${movieId}`);
-        const subtitleTrackData = await subtitleTrackResponse.json();
-
-        let subtitleTrack = subtitleTrackData.find(track =>
-            track.display.includes('Arabic') && (track.encoding === 'ASCII' || track.encoding === 'UTF-8')
-        );
-
-        if (!subtitleTrack) {
-            subtitleTrack = subtitleTrackData.find(track => track.display.includes('Arabic') && (track.encoding === 'CP1252'));
+        return await fetchv2(url, options.headers ?? {}, options.method ?? 'GET', options.body ?? null);
+    } catch(e) {
+        try {
+            return await fetch(url, options);
+        } catch(error) {
+            return null;
         }
+    }
+}
 
-        if (!subtitleTrack) {
-            subtitleTrack = subtitleTrackData.find(track => track.display.includes('Arabic') && (track.encoding === 'CP1250'));
+function btoa(input) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+    let str = String(input);
+    let output = '';
+
+       for (let block = 0, charCode, i = 0, map = chars;
+        str.charAt(i | 0) || (map = '=', i % 1);
+        output += map.charAt(63 & (block >> (8 - (i % 1) * 8)))) {
+        charCode = str.charCodeAt(i += 3 / 4);
+        if (charCode > 0xFF) {
+            throw new Error("btoa failed: The string contains characters outside of the Latin1 range.");
         }
-
-        if (!subtitleTrack) {
-            subtitleTrack = subtitleTrackData.find(track => track.display.includes('Arabic') && (track.encoding === 'CP850'));
-        }
-
-        return subtitleTrack ? subtitleTrack.url : '';  // إرجاع رابط الترجمة إذا كان متاحًا
-    } catch (err) {
-        console.error('Error fetching subtitles:', err);
-        return '';  // إذا فشل، إرجاع قيمة فارغة
+        block = (block << 8) | charCode;
     }
+
+    return output;
 }
-
-// دالة لتحميل روابط البث للمحتوى (فيلم أو مسلسل)
-async function extractStreamLinks(movieId, isMovie = true) {
-    try {
-        let streams = [];
-
-        const embedUrl = isMovie ? `https://vidsrc.su/embed/movie/${movieId}` : `https://vidsrc.su/embed/tv/${movieId}`;
-        const data1 = await fetch(embedUrl).then(res => res.text());
-
-        const urlRegex = /url:\s*(['"])(.*?)\1/gm;
-        const streams2 = Array.from(data1.matchAll(urlRegex), m => m[2].trim()).filter(Boolean);
-
-        streams = [...streams, ...streams2];
-
-        return streams;  // إرجاع روابط البث المتاحة
-    } catch (err) {
-        console.error('Error fetching stream links:', err);
-        return [];  // إرجاع مصفوفة فارغة إذا حدث خطأ
-    }
-}
-
-// دالة لتحويل البيانات إلى Base64
-function encodeToBase64(str) {
-    try {
-        return btoa(str);  // استخدام دالة البايتو
-    } catch (err) {
-        console.error('Error encoding to Base64:', err);
-        return '';
-    }
-}
-
-// دالة لفك ترميز الرابط إلى شكل أكثر قابلية للاستخدام
-function decodeFromBase64(encodedStr) {
-    try {
-        return atob(encodedStr);  // فك الترميز باستخدام atob
-    } catch (err) {
-        console.error('Error decoding from Base64:', err);
-        return '';
-    }
-}
-
-// دالة لعرض روابط البث والترجمة بشكل منسق
-async function displayStreamData(url) {
-    try {
-        const movieId = url.split('/').pop();  // استخراج ID من الرابط
-        const streams = await extractStreamLinks(movieId, url.includes('/movie/'));
-        const subtitleUrl = await extractSubtitles(movieId);
-
-        return JSON.stringify({
-            streams,
-            subtitles: subtitleUrl
-        });
-    } catch (err) {
-        console.error('Error displaying stream data:', err);
-        return JSON.stringify({
-            streams: [],
-            subtitles: ''
-        });
-    }
-}
-
-// استخدام كل هذه الدوال
-async function main() {
-    const searchTerm = "Batman";  // يمكنك تغيير الكلمة المفتاحية كما تشاء
-    const searchResultsData = await searchResults(searchTerm);
-    console.log('Search Results:', searchResultsData);
-
-    const movieUrl = 'https://bingeflix.tv/movie/12345';  // استبدل بـ URL حقيقي
-    const movieDetails = await extractDetails(movieUrl);
-    console.log('Movie Details:', movieDetails);
-
-    const episodes = await extractEpisodes(movieUrl);
-    console.log('Episodes:', episodes);
-
-    const streamData = await displayStreamData(movieUrl);
-    console.log('Stream Data:', streamData);
-}
-
-// بدء التطبيق
-main();
